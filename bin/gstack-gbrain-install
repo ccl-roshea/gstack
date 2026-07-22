@@ -46,7 +46,7 @@ PINNED_TAG=""
 # `sources list --json` wrapped-object shape + federated sources landed by 0.20;
 # older predates the surface gstack drives. Hard-fail below this floor (#1744).
 MIN_GBRAIN_VERSION="0.20.0"
-GBRAIN_REPO_URL="https://github.com/garrytan/gbrain.git"
+GBRAIN_REPO_URL="https://github.com/ccl-roshea/gbrain.git"
 DEFAULT_INSTALL_DIR="${GBRAIN_INSTALL_DIR:-$HOME/gbrain}"
 INSTALL_DIR="$DEFAULT_INSTALL_DIR"
 DRY_RUN=false
