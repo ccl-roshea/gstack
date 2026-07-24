@@ -1,0 +1,8 @@
+session_name: gstack
+start_directory: ~/repos/gstack
+windows:
+  - window_name: main
+    layout: even-horizontal
+    panes:
+      - shell_command: 
+      - shell_command: 
