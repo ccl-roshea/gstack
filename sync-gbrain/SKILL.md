@@ -1098,44 +1098,35 @@ Verbatim block content (copy exactly):
 ## GBrain Search Guidance (configured by /sync-gbrain)
 <!-- gstack-gbrain-search-guidance:start -->
 
-GBrain is set up and synced on this machine. The agent should prefer gbrain
-over Grep when the question is semantic or when you don't know the exact
-identifier yet.
+GBrain is set up and connected on this machine. Prefer gbrain over Grep when the
+question is semantic or you don't know the exact identifier yet.
 
-**This worktree is pinned to a worktree-scoped code source** via the
-`.gbrain-source` file in the repo root (kubectl-style context).
-`gbrain code-def`, `code-refs`, `code-callers`, `code-callees`, `search`, and
-`query` from anywhere under this worktree route to that source by default —
-no `--source` flag needed (gbrain >= 0.41.38.0; on older gbrain the call-graph
-commands need `--source "$(cat .gbrain-source)"`). Conductor sibling worktrees
-of the same repo each have their own pin and their own indexed pages, so
-semantic results match the code on disk here.
+Search vs query: `gbrain search "<terms>"` returns matching pages/snippets;
+`gbrain query "<question>"` returns an LLM-synthesized answer with citations.
 
-Call-graph queries (`code-callers`/`code-callees`) also need the graph to be
-built first — run `/sync-gbrain --dream` (or `--full`) if they return
-`count: 0`. This only works if this source's gbrain schema pack extracts code
-symbols; on a non-code-aware pack `--dream` completes but the graph stays empty
-and reports a WARN. `code-def`/`code-refs` need the same extraction.
+Curated memory is always available:
+- `~/.gstack/` curated memory (registered as a gbrain source via the federation pipeline).
 
-Two indexed corpora available via the `gbrain` CLI:
-- This worktree's code (auto-pinned via `.gbrain-source`).
-- `~/.gstack/` curated memory (registered as `gstack-brain-<user>` source via
-  the existing federation pipeline).
+Code search is PER-REPO — check, don't assume. Run `gbrain sources current --json`
+in the repo: if `source_id` starts with `gstack-code-`, this repo's code is indexed
+— use `gbrain search`/`query` for semantic code lookup. If it resolves to the brain
+default / a non-code source, the code isn't indexed — use Grep/LSP. Symbol commands
+(`code-def`/`code-refs`/`code-callers`/`code-callees`) additionally need a
+code-symbol-aware schema pack AND a built graph (`/sync-gbrain --dream`); on a
+non-code-aware pack they return `count: 0` — fall back to Grep/LSP for exact symbols.
 
 Prefer gbrain when:
 - "Where is X handled?" / semantic intent, no exact string yet:
     `gbrain search "<terms>"` or `gbrain query "<question>"`
-- "Where is symbol Y defined?" / symbol-based code questions:
-    `gbrain code-def <symbol>` or `gbrain code-refs <symbol>`
-- "What calls Y?" / "What does Y depend on?":
-    `gbrain code-callers <symbol>` / `gbrain code-callees <symbol>`
+- Symbol lookups IN AN INDEXED, CODE-AWARE repo:
+    `gbrain code-def <symbol>` / `code-refs` / `code-callers` / `code-callees`
 - "What did we decide last time?" / past plans, retros, learnings:
-    `gbrain search "<terms>" --source gstack-brain-<user>`
+    `gbrain query "<question>"` (optionally `--source <curated-memory-source>`)
 
-Grep is still right for known exact strings, regex, multiline patterns, and
-file globs. Run `/sync-gbrain` after meaningful code changes; for ongoing
-auto-sync across all worktrees, run `gbrain autopilot --install` once per
-machine — gbrain's daemon handles incremental refresh on a schedule.
+Grep/LSP remain right for exact strings, regex, multiline patterns, file globs, and
+all code symbols in un-indexed or non-code-aware repos. The brain auto-syncs on
+every gstack skill start; run `/sync-gbrain` to force-refresh, or
+`gbrain autopilot --install` once per machine for scheduled refresh.
 
 Safety: don't run `/sync-gbrain` while `gbrain autopilot` is active — the
 orchestrator refuses destructive source ops when it detects a running autopilot
