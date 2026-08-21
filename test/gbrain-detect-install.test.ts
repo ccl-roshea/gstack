@@ -177,7 +177,9 @@ describe('gstack-gbrain-install D5 detect-first', () => {
     const r = run(INSTALL, ['--dry-run']);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('DRY RUN: would clone');
-    expect(r.stdout).toContain('https://github.com/garrytan/gbrain.git');
+    // fork divergence: this fork installs gbrain from ccl-roshea (see
+    // GBRAIN_REPO_URL in bin/gstack-gbrain-install). Keep in sync on upstream merges.
+    expect(r.stdout).toContain('https://github.com/ccl-roshea/gbrain.git');
   });
 
   test('rejects a pre-existing path that lacks a valid gbrain package.json', () => {
