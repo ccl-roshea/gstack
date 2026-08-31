@@ -881,7 +881,7 @@ You are running the `/ship` workflow. This is a **non-interactive, fully automat
 - In-branch test failures (pre-existing failures are triaged, not auto-blocking)
 - Pre-landing review finds ASK items that need user judgment
 - MINOR or MAJOR version bump needed (ask — see Step 12)
-- Greptile review comments that need user decision (complex fixes, false positives)
+- AI reviewer comments that need user decision (complex fixes, false positives)
 - AI-assessed coverage below minimum threshold (hard gate with user override — see Step 7)
 - Plan items NOT DONE with no user override (see Step 8)
 - Plan verification failures (see Step 8.1)
@@ -2442,20 +2442,20 @@ Save the review output — it goes into the PR body in Step 19.
 
 ---
 
-## Step 10: Address Greptile review comments (if PR exists)
+## Step 10: Address AI reviewer comments (if PR exists)
 
-**Dispatch the fetch + classification as a subagent** using the Agent tool with `subagent_type: "general-purpose"`. The subagent pulls every Greptile comment, runs the escalation detection algorithm, and classifies each comment. Parent receives a structured list and handles user interaction + file edits.
+**Dispatch the fetch + classification as a subagent** using the Agent tool with `subagent_type: "general-purpose"`. The subagent pulls every AI-reviewer comment — Greptile and CodeAnt both — runs the escalation detection algorithm, and classifies each comment. Parent receives a structured list and handles user interaction + file edits.
 
 **Subagent prompt:**
 
-> You are classifying Greptile review comments for a /ship workflow. Read `$GSTACK_ROOT/review/greptile-triage.md` and follow the fetch, filter, classify, and **escalation detection** steps. Do NOT fix code, do NOT reply to comments, do NOT commit — report only.
+> You are classifying AI code-review bot comments for a /ship workflow. Read `$GSTACK_ROOT/review/greptile-triage.md` and follow the fetch, filter, classify, and **escalation detection** steps. That document is the authority on WHICH bots are in scope — report every comment its fetch returns, not only the ones from a bot named here. Do NOT fix code, do NOT reply to comments, do NOT commit — report only.
 >
-> For each comment, assign: `classification` (`valid_actionable`, `already_fixed`, `false_positive`, `suppressed`), `escalation_tier` (1 or 2), the file:line or [top-level] tag, body summary, and permalink URL.
+> For each comment, assign: `classification` (`valid_actionable`, `already_fixed`, `false_positive`, `suppressed`), `escalation_tier` (1 or 2), `tool` (the bot that raised it), the file:line or [top-level] tag, body summary, and permalink URL. Split a multi-finding comment (e.g. CodeAnt's `## CodeAnt Nitpicks` block) into one entry per `#### <n>.` heading.
 >
 > If no PR exists, `gh` fails, the API errors, or there are zero comments, output: `{"total":0,"comments":[]}` and stop.
 >
 > Otherwise, output a single JSON object on the LAST LINE of your response:
-> `{"total":N,"comments":[{"classification":"...","escalation_tier":N,"ref":"file:line","summary":"...","permalink":"url"},...]}`
+> `{"total":N,"comments":[{"classification":"...","escalation_tier":N,"tool":"greptile|codeant","ref":"file:line","summary":"...","permalink":"url"},...]}`
 
 **Parent processing:**
 
@@ -2463,7 +2463,7 @@ Parse the LAST line as JSON.
 
 If `total` is 0, skip this step silently. Continue to Step 12.
 
-Otherwise, print: `+ {total} Greptile comments ({valid_actionable} valid, {already_fixed} already fixed, {false_positive} FP)`.
+Otherwise, print: `+ {total} reviewer comments ({per-tool counts, e.g. `greptile: 2, codeant: 1`}) — {valid_actionable} valid, {already_fixed} already fixed, {false_positive} FP`. Name only the bots that actually commented.
 
 For each comment in `comments`:
 
@@ -2471,7 +2471,7 @@ For each comment in `comments`:
 - The comment (file:line or [top-level] + body summary + permalink URL)
 - `RECOMMENDATION: Choose A because [one-line reason]`
 - Options: A) Fix now, B) Acknowledge and ship anyway, C) It's a false positive
-- If user chooses A: apply the fix, commit the fixed files (`git add <fixed-files> && git commit -m "fix: address Greptile review — <brief description>"`), reply using the **Fix reply template** from greptile-triage.md (include inline diff + explanation), and save to both per-project and global greptile-history (type: fix).
+- If user chooses A: apply the fix, commit the fixed files (`git add <fixed-files> && git commit -m "fix: address {tool} review — <brief description>"`), reply using the **Fix reply template** from greptile-triage.md (include inline diff + explanation), and save to both per-project and global greptile-history (type: fix).
 - If user chooses C: reply using the **False Positive reply template** from greptile-triage.md (include evidence + suggested re-rank), save to both per-project and global greptile-history (type: fp).
 
 **VALID BUT ALREADY FIXED:** Reply using the **Already Fixed reply template** from greptile-triage.md — no AskUserQuestion needed:
@@ -3364,7 +3364,7 @@ through `gstack-version-bump`; never hand-roll the VERSION/package.json write.
 - **Date format in CHANGELOG:** `YYYY-MM-DD`
 - **Split commits for bisectability** — each commit = one logical change.
 - **TODOS.md completion detection must be conservative.** Only mark items as completed when the diff clearly shows the work is done.
-- **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence (inline diff, code references, re-rank suggestion). Never post vague replies.
+- **Use the reply templates from greptile-triage.md** for either bot. Every reply includes evidence (inline diff, code references, re-rank suggestion). Never post vague replies.
 - **Never push without fresh verification evidence.** If code changed after Step 5 tests, re-run before pushing.
 - **Step 7 generates coverage tests.** They must pass before committing. Never commit failing tests.
 - **The goal is: user says `/ship`, next thing they see is the review + PR URL + auto-synced docs.**

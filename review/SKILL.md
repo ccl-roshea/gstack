@@ -1126,13 +1126,13 @@ Read `~/.claude/skills/gstack/review/checklist.md`.
 
 ---
 
-## Step 2.5: Check for Greptile review comments
+## Step 2.5: Check for AI reviewer comments
 
 Read `~/.claude/skills/gstack/review/greptile-triage.md` and follow the fetch, filter, classify, and **escalation detection** steps.
 
-**If no PR exists, `gh` fails, API returns an error, or there are zero Greptile comments:** Skip this step silently. Greptile integration is additive — the review works without it.
+**If no PR exists, `gh` fails, API returns an error, or the fetch returns zero comments:** Skip this step silently. The integration is additive — the review works without it. Note the triage doc fetches EVERY recognised reviewer bot (Greptile and CodeAnt); a PR carrying only CodeAnt comments is not an empty result.
 
-**If Greptile comments are found:** Store the classifications (VALID & ACTIONABLE, VALID BUT ALREADY FIXED, FALSE POSITIVE, SUPPRESSED) — you will need them in Step 5.
+**If reviewer comments are found:** Store the classifications (VALID & ACTIONABLE, VALID BUT ALREADY FIXED, FALSE POSITIVE, SUPPRESSED) — you will need them in Step 5.
 
 ---
 
@@ -1614,21 +1614,21 @@ Before producing the final review output:
 
 **Rationalization prevention:** "This looks fine" is not a finding. Either cite evidence it IS fine, or flag it as unverified.
 
-### Greptile comment resolution
+### Reviewer comment resolution
 
-After outputting your own findings, if Greptile comments were classified in Step 2.5:
+After outputting your own findings, if reviewer comments were classified in Step 2.5:
 
-**Include a Greptile summary in your output header:** `+ N Greptile comments (X valid, Y fixed, Z FP)`
+**Include a reviewer summary in your output header:** `+ N reviewer comments (greptile: G, codeant: C) — X valid, Y fixed, Z FP`. Name only the bots that actually commented.
 
 Before replying to any comment, run the **Escalation Detection** algorithm from greptile-triage.md to determine whether to use Tier 1 (friendly) or Tier 2 (firm) reply templates.
 
 1. **VALID & ACTIONABLE comments:** These are included in your findings — they follow the Fix-First flow (auto-fixed if mechanical, batched into ASK if not) (A: Fix it now, B: Acknowledge, C: False positive). If the user chooses A (fix), reply using the **Fix reply template** from greptile-triage.md (include inline diff + explanation). If the user chooses C (false positive), reply using the **False Positive reply template** (include evidence + suggested re-rank), save to both per-project and global greptile-history.
 
 2. **FALSE POSITIVE comments:** Present each one via AskUserQuestion:
-   - Show the Greptile comment: file:line (or [top-level]) + body summary + permalink URL
+   - Show the comment: tool + file:line (or [top-level]) + body summary + permalink URL
    - Explain concisely why it's a false positive
    - Options:
-     - A) Reply to Greptile explaining why this is incorrect (recommended if clearly wrong)
+     - A) Reply to the bot explaining why this is incorrect (recommended if clearly wrong)
      - B) Fix it anyway (if low-effort and harmless)
      - C) Ignore — don't reply, don't fix
 
@@ -1899,4 +1899,4 @@ If the review exits early before a real review completes (for example, no diff a
 - **Fix-first, not read-only.** AUTO-FIX items are applied directly. ASK items are only applied after user approval. Never commit, push, or create PRs — that's /ship's job.
 - **Be terse.** One line problem, one line fix. No preamble.
 - **Only flag real problems.** Skip anything that's fine.
-- **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence. Never post vague replies.
+- **Use the reply templates from greptile-triage.md** for either bot. Every reply includes evidence. Never post vague replies.

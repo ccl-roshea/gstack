@@ -893,7 +893,7 @@ You are running the `/ship` workflow. This is a **non-interactive, fully automat
 - In-branch test failures (pre-existing failures are triaged, not auto-blocking)
 - Pre-landing review finds ASK items that need user judgment
 - MINOR or MAJOR version bump needed (ask — see Step 12)
-- Greptile review comments that need user decision (complex fixes, false positives)
+- AI reviewer comments that need user decision (complex fixes, false positives)
 - AI-assessed coverage below minimum threshold (hard gate with user override — see Step 7)
 - Plan items NOT DONE with no user override (see Step 8)
 - Plan verification failures (see Step 8.1)
@@ -934,7 +934,7 @@ sections. Read a section in full before doing its step; do not work from memory.
 | auditing test coverage of the diff (Step 7) | `sections/test-coverage.md` |
 | auditing plan completion, verification, and scope drift (Step 8) | `sections/plan-completion.md` |
 | the pre-landing review and specialist dispatch (Step 9) | `sections/review-army.md` |
-| addressing Greptile review comments when a PR exists (Step 10) | `sections/greptile.md` |
+| addressing AI reviewer comments when a PR exists (Step 10) | `sections/greptile.md` |
 | the adversarial review and learnings capture (Step 11) | `sections/adversarial.md` |
 | writing the CHANGELOG entry (Step 13) | `sections/changelog.md` |
 | syncing docs and creating or updating the PR/MR (Steps 18-19) | `sections/pr-body.md` |
@@ -1083,7 +1083,7 @@ git fetch origin <base> && git merge origin/<base> --no-edit
 > **STOP.** Before the pre-landing review and specialist dispatch (Step 9), Read `~/.claude/skills/gstack/ship/sections/review-army.md` and execute it
 > in full. Do not work from memory — that section is the source of truth for this step.
 
-> **STOP.** Before addressing Greptile review comments when a PR exists (Step 10), Read `~/.claude/skills/gstack/ship/sections/greptile.md` and execute it
+> **STOP.** Before addressing AI reviewer comments when a PR exists (Step 10), Read `~/.claude/skills/gstack/ship/sections/greptile.md` and execute it
 > in full. Do not work from memory — that section is the source of truth for this step.
 
 > **STOP.** Before the adversarial review and learnings capture (Step 11), Read `~/.claude/skills/gstack/ship/sections/adversarial.md` and execute it
@@ -1498,7 +1498,7 @@ through `gstack-version-bump`; never hand-roll the VERSION/package.json write.
 - **Date format in CHANGELOG:** `YYYY-MM-DD`
 - **Split commits for bisectability** — each commit = one logical change.
 - **TODOS.md completion detection must be conservative.** Only mark items as completed when the diff clearly shows the work is done.
-- **Use Greptile reply templates from greptile-triage.md.** Every reply includes evidence (inline diff, code references, re-rank suggestion). Never post vague replies.
+- **Use the reply templates from greptile-triage.md** for either bot. Every reply includes evidence (inline diff, code references, re-rank suggestion). Never post vague replies.
 - **Never push without fresh verification evidence.** If code changed after Step 5 tests, re-run before pushing.
 - **Step 7 generates coverage tests.** They must pass before committing. Never commit failing tests.
 - **The goal is: user says `/ship`, next thing they see is the review + PR URL + auto-synced docs.**
