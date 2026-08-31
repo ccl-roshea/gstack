@@ -134,8 +134,27 @@ const CATALOG_MODE: 'trim' | 'full' = (() => {
 // the model skips them when EXPLAIN_LEVEL: terse appears in the preamble echo).
 // Opt-in via the build flag so most users get the runtime-flexible default.
 const EXPLAIN_LEVEL_ARG = process.argv.find(a => a.startsWith('--explain-level'));
+
+// User-local installs honor the `explain_level` config key. Gated on
+// --respect-detection for the same reason gbrain detection is: local state must
+// never leak into committed SKILL.md, or a contributor with terse set would
+// generate a terse corpus and trip the skill-docs freshness gate. `bun run
+// build` and CI pass no flag and stay on 'default'; `gen:skill-docs:user` and
+// ./setup --user pick up whatever the user configured.
+function explainLevelFromConfig(): 'default' | 'terse' | null {
+  if (!RESPECT_DETECTION) return null;
+  const stateDir = process.env.GSTACK_HOME || process.env.GSTACK_STATE_DIR
+    || path.join(process.env.HOME || '', '.gstack');
+  try {
+    const cfg = fs.readFileSync(path.join(stateDir, 'config.yaml'), 'utf-8');
+    return /^explain_level:\s*terse\s*$/m.test(cfg) ? 'terse' : 'default';
+  } catch {
+    return null;
+  }
+}
+
 const EXPLAIN_LEVEL: 'default' | 'terse' = (() => {
-  if (!EXPLAIN_LEVEL_ARG) return 'default';
+  if (!EXPLAIN_LEVEL_ARG) return explainLevelFromConfig() ?? 'default';
   const val = EXPLAIN_LEVEL_ARG.includes('=')
     ? EXPLAIN_LEVEL_ARG.split('=')[1]
     : process.argv[process.argv.indexOf(EXPLAIN_LEVEL_ARG) + 1];

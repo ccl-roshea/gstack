@@ -105,3 +105,48 @@ describe('gstack-config values with spaces', () => {
     ).toBe(true);
   });
 });
+
+describe('gen-skill-docs honors explain_level for user-local installs', () => {
+  // The config key round-trips (above) and the preamble echoes it at runtime,
+  // but the generator only ever read --explain-level from argv — so a user who
+  // set `explain_level: terse` still got the verbose Writing Style block baked
+  // into every tier-2+ SKILL.md. Gated on --respect-detection so committed
+  // artifacts and CI stay on 'default'.
+  const MARKER = 'Gloss curated jargon'; // present only in the default render
+
+  function generate(args: string[], home: string): number {
+    const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'gstack-gen-out-'));
+    const res = spawnSync('bun', ['run', 'scripts/gen-skill-docs.ts', '--host', 'claude', '--out-dir', outDir, ...args], {
+      env: { ...process.env, GSTACK_HOME: home, GSTACK_STATE_DIR: home },
+      encoding: 'utf-8',
+      cwd: ROOT,
+    });
+    if (res.status !== 0) throw new Error(`gen-skill-docs failed: ${res.stderr}`);
+    const hits = fs
+      .readdirSync(outDir, { recursive: true })
+      .filter((f) => String(f).endsWith('SKILL.md'))
+      .filter((f) => fs.readFileSync(path.join(outDir, String(f)), 'utf-8').includes(MARKER)).length;
+    fs.rmSync(outDir, { recursive: true, force: true });
+    return hits;
+  }
+
+  test('terse config + --respect-detection strips the verbose block', () => {
+    fs.writeFileSync(path.join(tmpHome, 'config.yaml'), 'explain_level: terse\n');
+    expect(generate(['--respect-detection'], tmpHome)).toBe(0);
+  });
+
+  test('terse config WITHOUT the flag still renders default (committed artifacts + CI stay stable)', () => {
+    fs.writeFileSync(path.join(tmpHome, 'config.yaml'), 'explain_level: terse\n');
+    expect(generate([], tmpHome)).toBeGreaterThan(0);
+  });
+
+  test('default config + --respect-detection renders default', () => {
+    fs.writeFileSync(path.join(tmpHome, 'config.yaml'), 'explain_level: default\n');
+    expect(generate(['--respect-detection'], tmpHome)).toBeGreaterThan(0);
+  });
+
+  test('explicit --explain-level still wins over config', () => {
+    fs.writeFileSync(path.join(tmpHome, 'config.yaml'), 'explain_level: default\n');
+    expect(generate(['--respect-detection', '--explain-level', 'terse'], tmpHome)).toBe(0);
+  });
+});
