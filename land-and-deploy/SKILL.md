@@ -1930,6 +1930,43 @@ After a successful revert: Tell the user "Revert pushed to {base}. The deploy sh
 
 ---
 
+## Step 8.5: Repo-declared post-deploy checks (run before the report)
+
+A deploy pipeline usually activates ONE thing. Anything else the repo runs from
+the same image — cron jobs, workers on a separate apply, sidecars — does not
+follow a merge, and the failure mode is silence: the merge is green, the report
+says deployed, and the other consumers keep running last week's code. Nobody
+finds out until the thing that was fixed breaks again.
+
+So after the deploy completes (and after any canary), run whatever the repo
+declares for exactly this:
+
+```bash
+ls scripts/check_*_images.py scripts/post-deploy-check* .gstack/post-deploy 2>/dev/null
+```
+
+**If the repo declares nothing, skip silently.** This step invents no checks and
+never blocks on a repo that has not asked for one.
+
+**If it does,** run each one and branch on its exit code. Say the result OUT
+LOUD either way — a silent pass here rebuilds the gap the step exists to close:
+
+- **0** — print what it verified, one line, and continue to the report.
+- **non-zero, and the script printed remediation** — relay its output VERBATIM,
+  including the commands, into the report's own section AND into the summary you
+  give the user. Do NOT attempt the remediation yourself: a step the repo routed
+  through a human is usually routed there because the automation deliberately
+  lacks the privilege (a deploy identity that cannot repoint a job is a control,
+  not an oversight), so quietly doing it is defeating the control rather than
+  satisfying it.
+- **an exit code the script documents as "could not determine"** — treat it as
+  NOT a pass and say so in those words. Unknown and clean must never print the
+  same.
+
+Add the result to the deploy report as a `Post-deploy:` line, and repeat any
+non-zero finding in Step 10's follow-ups so it survives the report scrolling
+past.
+
 ## Step 9: Deploy report
 
 Create the deploy report directory:

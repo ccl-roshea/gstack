@@ -10,7 +10,13 @@
 >
 > For each comment, assign: `classification` (`valid_actionable`, `already_fixed`, `false_positive`, `suppressed`), `escalation_tier` (1 or 2), `tool` (the bot that raised it), the file:line or [top-level] tag, body summary, and permalink URL. Split a multi-finding comment (e.g. CodeAnt's `## CodeAnt Nitpicks` block) into one entry per `#### <n>.` heading.
 >
-> If no PR exists, `gh` fails, the API errors, or there are zero comments, output: `{"total":0,"comments":[]}` and stop.
+> Four conditions used to collapse onto one silent skip here. They are NOT the same answer and must be reported apart — "the reviewer found nothing" and "we could not find out" look identical downstream, and that is exactly how a reviewer goes quiet unnoticed:
+>
+> - No PR exists → `{"status":"no_pr","total":0,"comments":[]}`
+> - `gh` fails or the API errors → `{"status":"unreadable","total":0,"comments":[],"why":"<the error>"}`
+> - The fetch worked and there were genuinely zero comments → `{"status":"ok","total":0,"comments":[]}`
+>
+> Then stop. On the normal path, include `"status":"ok"` alongside the comment list.
 >
 > Otherwise, output a single JSON object on the LAST LINE of your response:
 > `{"total":N,"comments":[{"classification":"...","escalation_tier":N,"tool":"greptile|codeant","ref":"file:line","summary":"...","permalink":"url"},...]}`
@@ -19,7 +25,34 @@
 
 Parse the LAST line as JSON.
 
-If `total` is 0, skip this step silently. Continue to Step 12.
+### Reviewer-coverage assertion (run this BEFORE triaging comments)
+
+This step triages the comments that ARRIVED. It has no notion of a reviewer that was EXPECTED and did not run, and a reviewer posting nothing is indistinguishable from one that found nothing. Not hypothetical: one vendor hit a monthly quota and twenty-one PRs merged unreviewed behind a green CI before anyone noticed.
+
+**If the repo ships `scripts/check_pr_reviewers.py`** it owns the expected-reviewer list (repo-specific; this skill is not). Run it for this PR:
+
+```bash
+if [ -f scripts/check_pr_reviewers.py ]; then
+  python3 -P scripts/check_pr_reviewers.py "$PR_NUMBER"; echo "REVIEWER_CHECK_EXIT=$?"
+else
+  echo "REVIEWER_CHECK_EXIT=absent"
+fi
+```
+
+Branch on the code, and say the result OUT LOUD either way — a silent pass here rebuilds the gap:
+- **0** — print `Reviewer coverage: {reviewers} posted.`
+- **70** — an expected reviewer posted NOTHING. Print the script's stderr verbatim, then **STOP** and ask before shipping: the vendor may be out of quota, and a green CI says nothing about it. A) Check the vendor's status first (recommended) B) Ship anyway, accepting an unreviewed PR C) Wait and re-run.
+- **71** — the check could not tell (API error, or a bound it refuses to truncate past). NOT a clean bill. Print the reason and treat it as missing coverage.
+- **absent** — fall through to the generic statement below.
+
+**If the repo ships no such script**, use the subagent's `status` field, and never let the three cases print the same thing:
+- `status: "ok"` with `total: 0` — print: `No reviewer comments on this PR. That is either a clean review or a reviewer that did not run; /ship cannot tell them apart here.`
+- `status: "unreadable"` — print: `Could NOT fetch reviewer comments ({why}). Reviewer coverage is unverified for this ship — not clean.` Continue, but never report this as "no findings".
+- `status: "no_pr"` — skip silently; there is nothing to review yet.
+
+---
+
+If `total` is 0, the triage below has nothing to process — continue to Step 12 after printing the coverage statement above.
 
 Otherwise, print: `+ {total} reviewer comments ({per-tool counts, e.g. `greptile: 2, codeant: 1`}) — {valid_actionable} valid, {already_fixed} already fixed, {false_positive} FP`. Name only the bots that actually commented.
 
