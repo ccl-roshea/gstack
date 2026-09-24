@@ -41,6 +41,7 @@ Branch on the code, and say the result OUT LOUD either way — a silent pass her
 - **0** — print `Reviewer coverage: {reviewers} posted.`
 - **70** — an expected reviewer posted NOTHING. Print the script's stderr verbatim, then **STOP** and ask before shipping: the vendor may be out of quota, and a green CI says nothing about it. A) Check the vendor's status first (recommended) B) Ship anyway, accepting an unreviewed PR C) Wait and re-run.
 - **71** — the check could not tell (API error, or a bound it refuses to truncate past). NOT a clean bill. Print the reason and treat it as missing coverage.
+- **72** — the reviewer POSTED, but no FINISHED review covers the head revision: a STALE review, not a silent one. Print the script's stderr verbatim — each `STALE REVIEW:` line names the unreviewed files (VERSION, changelogs, READMEs and root prose are pre-excused, so whatever is listed is real). Never report it as a pass, and never hard-stop the way 70 does: staleness is a judgement call, silence is not. If a finding says the reviewer `has not FINISHED reviewing the head revision`, it is reading head RIGHT NOW — waiting resolves it. **Ask** before shipping: A) Wait for the re-review, then re-run this check (recommended) B) Ship anyway — name the listed files as knowingly unreviewed in the ship summary.
 - **absent** — fall through to the generic statement below.
 
 **If the repo ships no such script**, use the subagent's `status` field, and never let the three cases print the same thing:
